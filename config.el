@@ -45,6 +45,14 @@
 (when (featurep 'native-compile)
   (setq native-comp-deferred-compilation-deny-list nil)) ; Reset if needed
 
+(setq org-latex-minted-options '(("frame" "leftline")))
+
+(setq org-latex-listings 'minted
+      org-latex-packages-alist '(("" "minted" nil))
+      org-latex-pdf-process
+      '("pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+        "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
+        "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
 
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 ;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
