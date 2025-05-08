@@ -57,6 +57,54 @@
         "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
         "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
 
+;; Function to kill async buffer and window
+(defun kill-async-buffer-and-window ()
+  (interactive)
+  (when-let* ((buf (get-buffer "*Async Shell Command*"))
+              (win (get-buffer-window buf)))
+    (delete-window win)
+    (kill-buffer buf)))
+
+;; Global keybinding to close the output window
+(map! "<f10>" #'kill-async-buffer-and-window)
+
+;; Modified Python execution with focus
+(defun run-python-script ()
+  (interactive)
+  (save-buffer)
+  (async-shell-command
+   (format "python3 %s" (shell-quote-argument (buffer-file-name))))
+  (when-let ((buf (get-buffer "*Async Shell Command*")))
+    (select-window (get-buffer-window buf))))
+
+(after! python
+  (map! :map python-mode-map
+        :n "<f9>" #'run-python-script
+        :i "<f9>" #'run-python-script))
+
+;; Modified Julia execution with focus
+(defun run-julia-script ()
+  (interactive)
+  (save-buffer)
+  (async-shell-command
+   (format "julia %s" (shell-quote-argument (buffer-file-name))))
+  (when-let ((buf (get-buffer "*Async Shell Command*")))
+    (select-window (get-buffer-window buf))))
+
+(after! julia-mode
+  (map! :map julia-mode-map
+        :n "<f9>" #'run-julia-script
+        :i "<f9>" #'run-julia-script))
+
+(after! ein
+  ;; Set a valid default notebook directory
+  (setq ein:jupyter-server-default-notebook-directory "~/learning/"))
+
+;; Set Jupyter path and kernel directories
+(setq ein:jupyter-server-command "jupyter-lab"
+      ein:kernel-spec-directories (list "~/.local/share/jupyter/kernels"
+                                      "/nix/var/nix/profiles/per-user/$USER/profile/share/jupyter/kernels"))
+
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 ;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
 ;;
