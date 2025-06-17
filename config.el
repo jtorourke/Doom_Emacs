@@ -105,7 +105,84 @@
       ein:kernel-spec-directories (list "~/.local/share/jupyter/kernels"
                                       "/nix/var/nix/profiles/per-user/$USER/profile/share/jupyter/kernels"))
 
+;; Enable tramp for sudo access
+(require 'tramp)
+
+(after! tramp
+  ;; Define safer sudo-dired function with async support
+  (defun sudired ()
+    (interactive)
+    (require 'tramp)
+    (let ((default-directory "/sudo::/"))
+      (call-interactively #'dired)))
+
+  ;; Bind to F6 with built-in doom keybinding syntax
+  (map! :nvi "<f6>" #'sudired))
+
+(after! org-roam
+  ;; Set journal directory
+  (setq org-roam-dailies-directory "journal/")
+
+  ;; Custom function to open journal in buffer
+  (defun my/org-roam-journal-buffer ()
+    "Open or create today's org-roam journal entry in a new buffer."
+    (interactive)
+    (let* ((daily-dir (expand-file-name org-roam-dailies-directory org-roam-directory))
+           (filename (format-time-string "%Y-%m-%d.org"))
+           (filepath (expand-file-name filename daily-dir)))
+      ;; Create directory if needed
+      (unless (file-exists-p daily-dir)
+        (make-directory daily-dir t))
+      ;; Create template if file doesn't exist
+      (unless (file-exists-p filepath)
+        (with-temp-file filepath
+          (insert (format "#+TITLE: Daily Journal - %s\n" (format-time-string "%A, %B %d, %Y"))
+          (insert "#+CREATED: %U\n#+LAST_MODIFIED: %U\n\n")
+          (insert "* Daily Journal: " (format-time-string "%A, %B %d, %Y") "\n")
+          (insert ":PROPERTIES:\n")
+          (insert ":CREATED: %U\n:LAST_MODIFIED: %U\n")
+          (insert ":ID: %(org-id-get-create)\n:END:\n\n")
+          (insert "** Morning Reflections\n%U\n- Mood: \n- Energy Level: \n- Focus: \n- What's on your mind?\n\n")
+          (insert "** Daily Goals\n- [ ] Priority 1\n- [ ] Priority 2\n- [ ] Priority 3\n\n")
+          (insert "** Tasks\n\n\n")
+          (insert "** Evening Reflections\n%U\n- Wins/Achievements:\n- Challenges/Lessons:\n- Tomorrow's Focus:\n\n")
+          (insert "** Gratitude\n- I'm grateful for:\n1. \n2. \n3. \n\n")
+          (insert "** Notes & Ideas\n- Random thoughts:\n- Interesting links:\n- Creative ideas:\n\n")
+          (insert "** Daily Review\n- Tasks Completed:\n- Tasks Migrated:\n- Habit Tracking:\n\n")
+          (insert "*** Related Notes\n[[id:%(org-id-get-create)][This Journal Entry]]\n")))
+      ;; Open in buffer
+      (find-file filepath)))
+
+  ;; Keybinding;
+  (map! :leader
+       (:prefix ("j" . "journal")
+        :desc "Open daily journal" "d" #'my/org-roam-journal-buffer))))
+
+;; Add last-modified timestamp to Org files
+(defun my/update-last-modified ()
+  "Update LAST_MODIFIED property in file header on save."
+  (when (and (eq major-mode 'org-mode)
+             (buffer-file-name))
+    (save-excursion
+      (goto-char (point-min))
+      (let ((case-fold-search t)
+            (time-str (format-time-string "[%Y-%m-%d %a %H:%M]")))
+        ;; Update existing property or insert new one
+        (if (re-search-forward "^#\\+LAST_MODIFIED:" nil t)
+            (progn
+              (delete-region (point) (line-end-position))
+              (insert " " time-str))
+          ;; Insert after existing header content
+          (goto-char (point-min))
+          (re-search-forward "^#\\+" nil t)
+          (end-of-line)
+          (insert "\n#+LAST_MODIFIED: " time-str))))))
+
+;; Enable for all Org files
+(add-hook 'before-save-hook #'my/update-last-modified)
+
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
+
 ;; `after!' block, otherwise Doom's defaults may override your settings. E.g.
 ;;
 ;;   (after! PACKAGE
