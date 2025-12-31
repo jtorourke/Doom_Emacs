@@ -46,7 +46,7 @@
 (setq org-directory "~/org/")
 
 (when (featurep 'native-compile)
-  (setq native-comp-deferred-compilation-deny-list nil)) ; Reset if needed
+  (setq native-comp-jit-compilation-deny-list nil)) ; Reset if needed
 
 (setq org-latex-minted-options '(("frame" "leftline")))
 
@@ -57,15 +57,19 @@
         "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"
         "pdflatex -shell-escape -interaction nonstopmode -output-directory %o %f"))
 
-;; Function to kill async buffer and window
-(defun kill-async-buffer-and-window ()
-  (interactive)
-  (when-let* ((buf (get-buffer "*Async Shell Command*"))
-              (win (get-buffer-window buf)))
-    (delete-window win)
-    (kill-buffer buf)))
+(require 'workgroups2)
+
+;; Ensure vterm windows are dedicated to prevent reuse
+(after! vterm
+  (add-hook 'vterm-mode-hook
+            (lambda ()
+              (set-window-dedicated-p (get-buffer-window) t))))
 
 ;; Global keybinding to close the output window
+(defun kill-async-buffer-and-window()
+  (interactive)
+  (kill-buffer-and-window))
+
 (map! "<f10>" #'kill-async-buffer-and-window)
 
 ;; Modified Python execution with focus
@@ -73,9 +77,7 @@
   (interactive)
   (save-buffer)
   (async-shell-command
-   (format "python3 %s" (shell-quote-argument (buffer-file-name))))
-  (when-let ((buf (get-buffer "*Async Shell Command*")))
-    (select-window (get-buffer-window buf))))
+   (format "python3 %s" (shell-quote-argument (buffer-file-name)))))
 
 (after! python
   (map! :map python-mode-map
@@ -87,14 +89,46 @@
   (interactive)
   (save-buffer)
   (async-shell-command
-   (format "julia %s" (shell-quote-argument (buffer-file-name))))
-  (when-let ((buf (get-buffer "*Async Shell Command*")))
-    (select-window (get-buffer-window buf))))
+   (format "julia %s" (shell-quote-argument (buffer-file-name)))))
 
 (after! julia-mode
   (map! :map julia-mode-map
         :n "<f9>" #'run-julia-script
         :i "<f9>" #'run-julia-script))
+
+;; Gleam execution with focus
+(defun run-gleam-script ()
+  (interactive)
+  (save-buffer)
+  ;; Determine if we're in a Gleam project
+  (let* ((default-directory (or (locate-dominating-file default-directory "gleam.toml")
+                               default-directory))
+         (command (if (string-match-p "\\.gleam$" (buffer-file-name))
+                      (format "gleam run -m %s"
+                              (file-name-base (buffer-file-name)))
+                    "gleam run")))
+    (async-shell-command command)
+    (when-let ((buf (get-buffer "*Async Shell Command*")))
+      (select-window (get-buffer-window buf)))))
+
+;; Gleam test runner
+(defun run-gleam-test ()
+  (interactive)
+  (save-buffer)
+  (let* ((default-directory (or (locate-dominating-file default-directory "gleam.toml")
+                               default-directory))
+         (command "gleam test"))
+    (async-shell-command command)
+    (when-let ((buf (get-buffer "*Async Shell Command*")))
+      (select-window (get-buffer-window buf)))))
+
+;; Hook for gleam-mode (install gleam-mode via doom if not already)
+(after! gleam-ts-mode
+  (map! :map gleam-ts-mode-map
+        :n "<f9>" #'run-gleam-script
+        :i "<f9>" #'run-gleam-script
+        :n "<f8>" #'run-gleam-test
+        :i "<f8>" #'run-gleam-test))
 
 (after! ein
   ;; Set a valid default notebook directory
@@ -181,6 +215,59 @@
 ;; Enable for all Org files
 (add-hook 'before-save-hook #'my/update-last-modified)
 
+;; Helper function to find or create a file in the current directory
+(defun my/find-or-create-file-in-current-dir ()
+  "Return the buffer for a file in the current working directory.
+Prompts for a filename. Creates the file if it doesn't exist."
+  (interactive)
+  (let* ((default-dir default-directory) ; Gets the reliable current directory
+         (filename (read-string "Enter filename (without .org): "))
+         (full-path (expand-file-name (concat filename ".org") default-dir)))
+    ;; Create the file's parent directory if needed (optional)
+    (make-directory (file-name-directory full-path) t)
+    ;; Find the file and return its buffer
+    (find-file-noselect full-path)))
+
+(after! org
+  (setq org-capture-templates
+        '(("v" "Volleyball Drill" entry
+           ;; Use the function as the target
+           (function my/find-or-create-file-in-current-dir)
+           "* %^{Drill Name}
+:PROPERTIES:
+:DIFFICULTY: %^{Beginner/Intermediate/Advanced}
+:DRILL_TYPE: %^{Warm-up/Passing/Serving/Gameplay}
+:DURATION: %^{Duration in minutes}
+:EQUIPMENT: %^{Balls/Cones/Net/etc}
+:CATEGORY: %^{Category}
+:TAGS:
+:END:
+%?")
+
+          ("b" "Blog Post" entry
+           ;; Use the same function for blog posts
+           (function my/find-or-create-file-in-current-dir)
+           "* %^{Title}
+:PROPERTIES:
+:EXPORT_DATE: %<%Y-%m-%d %H:%M>
+:SUBTITLE: %^{Subtitle}
+:CATEGORY: %^{Category}
+:TAGS:
+:END:
+%?"))))
+
+
+(require 'exercism)
+
+(use-package! gleam-ts-mode
+  :mode (rx ".gleam" eos))
+
+(after! treesit
+  (add-to-list 'auto-mode-alist '("\\.gleam$" . gleam-ts-mode)))
+
+(after! gleam-ts-mode
+  (unless (treesit-language-available-p 'gleam)
+    (gleam-ts-install-grammar)))
 ;; Whenever you reconfigure a package, make sure to wrap your config in an
 
 ;; `after!' block, otherwise Doom's defaults may override your settings. E.g.

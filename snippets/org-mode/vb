@@ -1,0 +1,19 @@
+# -*- mode: snippet -*-
+# name: vbm
+# key: vbm
+# --
+#+TITLE: $1
+#+DESCRIPTION: $2
+#+DIFFICULTY: ${3|Beginner,Intermediate,Advanced|}
+#+DRILL_TYPE: ${4|Cooperative,Competitive,Individual,Paired|}
+#+DURATION: $5
+#+PLAYERS_MIN: $6
+#+PLAYERS_MAX: $7
+#+PRIMARY_SKILL: ${8|Offense,Defense,Serve,Serve Receive,Setting,Blocking|}
+#+SECONDARY_SKILLS: $9
+#+TAGS: $10
+#+RELATED_DRILLS: $11
+#+EQUIPMENT: $12
+#+SPACE: $13
+#+VIDEO_URL: $14
+$0
