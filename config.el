@@ -65,18 +65,27 @@
             (lambda ()
               (set-window-dedicated-p (get-buffer-window) t))))
 
-;; Global keybinding to close the output window
-(defun kill-async-buffer-and-window()
+;; ── Global: close the output window ──────────────────────────────────────────
+(defun kill-async-buffer-and-window ()
   (interactive)
   (kill-buffer-and-window))
 
 (map! "<f10>" #'kill-async-buffer-and-window)
 
-;; Modified Python execution with focus
+;; ── Shared helper ─────────────────────────────────────────────────────────────
+;; Runs a shell command asynchronously and focuses the output window.
+;; All language runners below use this instead of calling async-shell-command
+;; directly, so focus behaviour is consistent everywhere.
+(defun run-command-and-focus (command)
+  (async-shell-command command)
+  (when-let ((buf (get-buffer "*Async Shell Command*")))
+    (select-window (get-buffer-window buf))))
+
+;; ── Python ────────────────────────────────────────────────────────────────────
 (defun run-python-script ()
   (interactive)
   (save-buffer)
-  (async-shell-command
+  (run-command-and-focus
    (format "python3 %s" (shell-quote-argument (buffer-file-name)))))
 
 (after! python
@@ -84,11 +93,11 @@
         :n "<f9>" #'run-python-script
         :i "<f9>" #'run-python-script))
 
-;; Modified Julia execution with focus
+;; ── Julia ─────────────────────────────────────────────────────────────────────
 (defun run-julia-script ()
   (interactive)
   (save-buffer)
-  (async-shell-command
+  (run-command-and-focus
    (format "julia %s" (shell-quote-argument (buffer-file-name)))))
 
 (after! julia-mode
@@ -96,39 +105,81 @@
         :n "<f9>" #'run-julia-script
         :i "<f9>" #'run-julia-script))
 
-;; Gleam execution with focus
+;; ── Gleam ─────────────────────────────────────────────────────────────────────
 (defun run-gleam-script ()
   (interactive)
   (save-buffer)
-  ;; Determine if we're in a Gleam project
   (let* ((default-directory (or (locate-dominating-file default-directory "gleam.toml")
-                               default-directory))
+                                default-directory))
          (command (if (string-match-p "\\.gleam$" (buffer-file-name))
                       (format "gleam run -m %s"
                               (file-name-base (buffer-file-name)))
                     "gleam run")))
-    (async-shell-command command)
-    (when-let ((buf (get-buffer "*Async Shell Command*")))
-      (select-window (get-buffer-window buf)))))
+    (run-command-and-focus command)))
 
-;; Gleam test runner
 (defun run-gleam-test ()
   (interactive)
   (save-buffer)
   (let* ((default-directory (or (locate-dominating-file default-directory "gleam.toml")
-                               default-directory))
-         (command "gleam test"))
-    (async-shell-command command)
-    (when-let ((buf (get-buffer "*Async Shell Command*")))
-      (select-window (get-buffer-window buf)))))
+                                default-directory)))
+    (run-command-and-focus "gleam test")))
 
-;; Hook for gleam-mode (install gleam-mode via doom if not already)
 (after! gleam-ts-mode
   (map! :map gleam-ts-mode-map
         :n "<f9>" #'run-gleam-script
         :i "<f9>" #'run-gleam-script
         :n "<f8>" #'run-gleam-test
         :i "<f8>" #'run-gleam-test))
+
+;; ── Elixir / Phoenix ──────────────────────────────────────────────────────────
+(defun run-elixir-script ()
+  (interactive)
+  (save-buffer)
+  (run-command-and-focus
+   (format "elixir %s" (shell-quote-argument (buffer-file-name)))))
+
+(defun run-elixir-tests ()
+  (interactive)
+  (save-buffer)
+  (let* ((default-directory (or (locate-dominating-file default-directory "mix.exs")
+                                default-directory)))
+    (run-command-and-focus "mix test")))
+
+(defun run-elixir-test-file ()
+  (interactive)
+  (save-buffer)
+  (let* ((default-directory (or (locate-dominating-file default-directory "mix.exs")
+                                default-directory))
+         (relative-path (file-relative-name (buffer-file-name) default-directory)))
+    (run-command-and-focus (format "mix test %s" (shell-quote-argument relative-path)))))
+
+(defun run-elixir-mix ()
+  (interactive)
+  (save-buffer)
+  (let* ((default-directory (or (locate-dominating-file default-directory "mix.exs")
+                                default-directory)))
+    (run-command-and-focus
+     (format "mix run %s" (shell-quote-argument (buffer-file-name))))))
+
+(after! elixir-mode
+  (map! :map elixir-mode-map
+        :n "<f9>" #'run-elixir-script
+        :i "<f9>" #'run-elixir-script
+        :n "<f8>" #'run-elixir-tests
+        :i "<f8>" #'run-elixir-tests
+        :n "<f7>" #'run-elixir-test-file
+        :i "<f7>" #'run-elixir-test-file
+        :localleader "rr" #'run-elixir-mix))
+
+(after! elixir-ts-mode
+  (map! :map elixir-ts-mode-map
+        :n "<f9>" #'run-elixir-script
+        :i "<f9>" #'run-elixir-script
+        :n "<f8>" #'run-elixir-tests
+        :i "<f8>" #'run-elixir-tests
+        :n "<f7>" #'run-elixir-test-file
+        :i "<f7>" #'run-elixir-test-file
+        :localleader "rr" #'run-elixir-mix))
 
 (after! ein
   ;; Set a valid default notebook directory
@@ -188,8 +239,8 @@
       (find-file filepath)))
 
   ;; Keybinding;
-  (map! :leader
-       (:prefix ("j" . "journal")
+   (map! :leader
+        (:prefix ("j" . "journal")
         :desc "Open daily journal" "d" #'my/org-roam-journal-buffer))))
 
 ;; Add last-modified timestamp to Org files
@@ -254,7 +305,22 @@ Prompts for a filename. Creates the file if it doesn't exist."
 :CATEGORY: %^{Category}
 :TAGS:
 :END:
-%?"))))
+%?")
+                  ("w" "Work Log Entry"
+         entry (file+datetree "~/projects/journals/work-log.org")
+         "* %?"
+         :empty-lines 0)
+                 ("n" "Note"
+         entry (file+headline "~/projects/journals/notes.org" "Random Notes")
+         "** %?"
+         :empty-lines 0)
+("j" "Journal Entry"
+         entry (file+datetree "~/projects/journals/journal.org")
+         "* %?"
+         :empty-lines 0)
+        )
+ )
+)
 
 
 (require 'exercism)
