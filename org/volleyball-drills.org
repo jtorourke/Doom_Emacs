@@ -1,0 +1,10 @@
+* Drills
+#+LAST_MODIFIED: [2025-12-09 Tue 14:47]
+** Dig-Set
+:PROPERTIES:
+:DIFFICULTY: Intermediate
+:DRILL_TYPE: Warm-up
+:DURATION: 10
+:EQUIPMENT: Balls/Net
+:END:
+

@@ -1,0 +1,61 @@
+#+title: Packing
+#+AUTHOR: John Tedesco O'Rourke
+#+LAST_MODIFIED: [2025-06-30 Mon 10:29]
+#+OPTIONS: toc:nil
+#+OPTIONS: num:nil
+
+* _Things to pack for Orlando:_
+** _Clothes_
+*** Uno Shirts
+- [ ] Gray LY
+- [ ] Gray CY
+- [ ] Gray Resign
+- [ ] Black
+- [ ] Black Longsleeve
+*** Hawaiian Shirt
+*** Scratch Shirts
+- [ ] Vans
+- [ ] Liquid Death
+- [ ] Undershirts
+*** Socks
+*** Underwear
+*** Sleep Underwear
+*** Shorts
+- [ ] Black Lulu
+- [ ] Khaki Shorts
+- [ ] Blue Lulu
+- [ ] Navy Shorts
+*** Pants
+- [ ] Athletic Pants x2
+*** Hoodie
+- [ ] Uno Gray
+** _Electronics_
+- [ ] Dixel Buds
+- [ ] IEMs
+- [ ] Phone Charger
+- [ ] Headphones Charger
+- [ ] Portable Charger
+- [ ] iPhone Cable
+- [ ] USB-C Cable
+- [ ] Netdot
+** _Shoes_
+*** Vans
+**** Authentics
+- [ ] Black
+- [ ] Green
+- [ ] Blue
+**** Sk8-Hi
+- [ ] Pink
+*** Birks
+** _Toiletries_
+- [ ] Sensodyne
+- [ ] Therabreath
+- [ ] Shampoo/Conditioner
+- [ ] Toothbrush
+- [ ] Dial Bar
+- [ ] Face Wash
+- [ ] Q-Tips
+** _Misc._
+- [ ] Notebooks
+- [ ] Laptop + Charger
+- [ ] Keyboard
